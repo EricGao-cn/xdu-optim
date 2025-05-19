@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from matplotlib import rcParams
-rcParams['font.family'] = 'Hei'
+plt.rcParams['font.family'] = 'Hei'
 
 x1 = np.linspace(0, 10, 400) 
 
@@ -97,7 +96,7 @@ for p_x, p_y in valid_vertices:
 print(f"\n最优解:")
 if optimal_point:
     print(f"在点 ({optimal_point[0]:.2f}, {optimal_point[1]:.2f}) 处取得最大值")
-    print(f"最大值 z = {max_z:.2f}")
+    print(f"最大值 z = {max_z:.2f}\n")
 
     x_opt_line = np.linspace(0, 5, 100)
     y_opt_line = max_z - 2 * x_opt_line
