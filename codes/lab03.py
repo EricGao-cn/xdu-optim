@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 plt.rcParams['font.sans-serif'] = ['Hei']  
 plt.rcParams['axes.unicode_minus'] = False    
@@ -18,55 +17,43 @@ def rosenbrock_grad(x):
 def backtracking_line_search(f, grad_f_xk, xk, pk, alpha_init=1.0, rho=0.5, c=1e-4):
     alpha = alpha_init
     fxk = f(xk)
-    # Armijo 条件: f(xk + alpha*pk) <= f(xk) + c * alpha * grad_f_xk.T @ pk
-    # 注意: pk 是搜索方向。对于最速下降法, pk = -grad_f_xk
-    # 所以 grad_f_xk.T @ pk = - ||grad_f_xk||^2
     dot_grad_pk = np.dot(grad_f_xk, pk)
-
     max_ls_iters = 100 
     count_ls_iters = 0
-
     while f(xk + alpha * pk) > fxk + c * alpha * dot_grad_pk:
         alpha = rho * alpha
         count_ls_iters += 1
-        if alpha < 1e-12 or count_ls_iters > max_ls_iters : # 防止 alpha 过小或迭代过多
-            # print(f"Line search alpha too small ({alpha}) or max_iters ({count_ls_iters})")
-            if alpha < 1e-12 and f(xk + alpha * pk) > fxk : # 如果alpha太小且没有改善，返回一个极小的alpha或0
-                 return 1e-12 # 或引发错误/警告
-            break # 退出循环，使用当前的alpha
+        if alpha < 1e-12 or count_ls_iters > max_ls_iters : 
+            if alpha < 1e-12 and f(xk + alpha * pk) > fxk : 
+                 return 1e-12 
+            break 
     return alpha
 
 def steepest_descent(f, grad_f, x0, max_iter=10000, tol=1e-6, line_search_alpha_init=1.0):
     xk = np.array(x0, dtype=float) 
     path = [xk.copy()]  
-    
     iteration_summary = [] 
 
     for k in range(max_iter):
         grad_xk = grad_f(xk)
         grad_norm = np.linalg.norm(grad_xk)
-        
         fxk = f(xk)
         iteration_summary.append((k, xk.copy(), fxk, grad_norm))
 
         if grad_norm < tol:
-            # print(f"梯度范数 {grad_norm:.2e} 小于容差 {tol}, 算法收敛。")
             break
         
         pk = -grad_xk  
-        
         alpha = backtracking_line_search(f, grad_xk, xk, pk, alpha_init=line_search_alpha_init)
         
         if alpha < 1e-12 : 
             print(f"迭代 {k+1}: 步长 alpha ({alpha:.2e}) 过小，可能无法取得进展。")
-            # break # 可以选择在这里停止，或者继续尝试
         
         xk = xk + alpha * pk
         path.append(xk.copy())
         
-        if (k + 1) % 500 == 0: # 每500次迭代打印一次信息
+        if (k + 1) % 1000 == 0: 
             print(f"迭代 {k+1}: x = {xk}, f(x) = {f(xk):.4e}, ||grad f(x)|| = {grad_norm:.4e}, alpha = {alpha:.2e}")
-
     else: 
         print(f"达到最大迭代次数 {max_iter}。")
 
@@ -75,31 +62,55 @@ def steepest_descent(f, grad_f, x0, max_iter=10000, tol=1e-6, line_search_alpha_
          grad_norm = np.linalg.norm(grad_xk)
          fxk = f(xk)
          iteration_summary.append((k if k < max_iter else max_iter, xk.copy(), fxk, grad_norm))
-
-
     return xk, np.array(path), iteration_summary
 
-def plot_rosenbrock_optimization(path, initial_point_str, ax):
-    x1_range = np.linspace(min(path[:,0].min(), -2)-0.5, max(path[:,0].max(), 2)+0.5, 300)
-    x2_range = np.linspace(min(path[:,1].min(), -1)-0.5, max(path[:,1].max(), 3)+0.5, 300)
+def plot_rosenbrock_optimization_2d(path, initial_point_str, ax):
+    x_min_plot = min(path[:,0].min(), 1, -2) - 0.5
+    x_max_plot = max(path[:,0].max(), 1, 2) + 0.5
+    y_min_plot = min(path[:,1].min(), 1, -1) - 0.5
+    y_max_plot = max(path[:,1].max(), 1, 3) + 0.5
+    
+    x1_range = np.linspace(x_min_plot, x_max_plot, 200)
+    x2_range = np.linspace(y_min_plot, y_max_plot, 200)
     X1, X2 = np.meshgrid(x1_range, x2_range)
     Z = rosenbrock([X1, X2]) 
 
-    ax.contour(X1, X2, Z, levels=np.logspace(-0.5, 3.5, 20, base=10), cmap='viridis')
-    ax.plot(path[:, 0], path[:, 1], 'r.-', markersize=3, linewidth=1, label='优化路径')
-    ax.plot(path[0, 0], path[0, 1], 'bo', markersize=6, label='初始点')
-    ax.plot(1, 1, 'g*', markersize=10, label='全局最小值 (1,1)') 
+    ax.contour(X1, X2, Z, levels=np.logspace(-0.5, 3.5, 25, base=10), cmap='viridis') 
+    ax.plot(path[:, 0], path[:, 1], 'r.-', markersize=2, linewidth=0.8, label='优化路径') 
+    ax.plot(path[0, 0], path[0, 1], 'bo', markersize=5, label='初始点')
+    ax.plot(1, 1, 'g*', markersize=8, label='全局最小值 (1,1)') 
     ax.set_xlabel('$x_1$')
     ax.set_ylabel('$x_2$')
-    ax.set_title(f'Rosenbrock函数最速下降法 (初始点: {initial_point_str})')
-    ax.legend()
+    ax.set_title(f'2D等高线图 (初始点: {initial_point_str})')
+    ax.legend(fontsize='small')
     ax.grid(True, linestyle='--', alpha=0.7)
-    
-    padding_x = (path[:,0].max() - path[:,0].min()) * 0.1 + 0.5
-    padding_y = (path[:,1].max() - path[:,1].min()) * 0.1 + 0.5
-    ax.set_xlim(path[:,0].min() - padding_x, path[:,0].max() + padding_x)
-    ax.set_ylim(path[:,1].min() - padding_y, path[:,1].max() + padding_y)
+    ax.set_xlim(x_min_plot, x_max_plot)
+    ax.set_ylim(y_min_plot, y_max_plot)
 
+def plot_rosenbrock_optimization_3d(path, initial_point_str, ax):
+    x_min_plot = min(path[:,0].min(), 1, -2) - 0.5
+    x_max_plot = max(path[:,0].max(), 1, 2) + 0.5
+    y_min_plot = min(path[:,1].min(), 1, -1) - 0.5
+    y_max_plot = max(path[:,1].max(), 1, 3) + 0.5
+
+    x1_surf = np.linspace(x_min_plot, x_max_plot, 100) 
+    x2_surf = np.linspace(y_min_plot, y_max_plot, 100)
+    X1_surf, X2_surf = np.meshgrid(x1_surf, x2_surf)
+    Z_surf = rosenbrock([X1_surf, X2_surf])
+
+    ax.plot_surface(X1_surf, X2_surf, Z_surf, cmap='viridis', alpha=0.6, edgecolor='none', rstride=5, cstride=5)
+
+    path_z = np.array([rosenbrock(p) for p in path])
+    ax.plot(path[:, 0], path[:, 1], path_z, 'r.-', markersize=2, linewidth=1, label='优化路径')
+    ax.scatter(path[0, 0], path[0, 1], rosenbrock(path[0,:]), color='blue', s=50, label='初始点', depthshade=True)
+    ax.scatter(1, 1, rosenbrock(np.array([1,1])), color='green', marker='*', s=100, label='全局最小值 (1,1)', depthshade=True)
+    
+    ax.set_xlabel('$x_1$')
+    ax.set_ylabel('$x_2$')
+    ax.set_zlabel('$f(x_1, x_2)$')
+    ax.set_title(f'3D曲面图 (初始点: {initial_point_str})')
+    ax.legend(fontsize='small')
+    ax.view_init(elev=25, azim=-130) 
 
 if __name__ == "__main__":
     initial_points = [
@@ -108,13 +119,11 @@ if __name__ == "__main__":
         np.array([2.0, 2.0]),
         np.array([-0.5, 2.5]) 
     ]
+    num_initial_points = len(initial_points)
 
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-    axes = axes.flatten() 
+    fig = plt.figure(figsize=(24, 12)) 
 
     for i, x0_val in enumerate(initial_points):
-        # print(f"\n===== 正在从初始点 {x0_val} 开始优化 =====")
-        
         x_star, path_history, iter_data = steepest_descent(
             rosenbrock, 
             rosenbrock_grad, 
@@ -125,30 +134,19 @@ if __name__ == "__main__":
         )
         
         final_k, final_x, final_fx, final_grad_norm = iter_data[-1]
-        print(f"\n--- 优化结果 (初始点: {x0_val}) ---")
+        print(f"--- 优化结果 (初始点: {x0_val}) ---")
         print(f"迭代次数: {final_k}")
         print(f"最优解 x*: {final_x}")
         print(f"最优函数值 f(x*): {final_fx:.6e}")
-        print(f"最终梯度范数 ||grad f(x*)||: {final_grad_norm:.6e}")
-        print()
+        print(f"最终梯度范数 ||grad f(x*)||: {final_grad_norm:.6e}\n")
         
-        current_ax = axes[i] 
-        plot_rosenbrock_optimization(path_history, str(x0_val), current_ax)
+        ax_2d = fig.add_subplot(2, num_initial_points, i + 1)
+        plot_rosenbrock_optimization_2d(path_history, str(x0_val), ax_2d)
+        
+        ax_3d = fig.add_subplot(2, num_initial_points, i + 1 + num_initial_points, projection='3d')
+        plot_rosenbrock_optimization_3d(path_history, str(x0_val), ax_3d)
 
-    plt.tight_layout() 
+    plt.tight_layout(pad=3.0, h_pad=4.0) 
+    plt.suptitle("最速下降法优化Rosenbrock函数 - 不同初始点对比", fontsize=16, y=0.99)
+    fig.subplots_adjust(top=0.92) 
     plt.show()
-
-    # 打印部分迭代详情 (示例：前5次和后5次)
-    # print("\n--- 部分迭代详情 (示例) ---")
-    # if iter_data:
-    #     print(f"{'k':<5} | {'x1':<12} | {'x2':<12} | {'f(x)':<15} | {'||grad||':<15}")
-    #     print("-" * 65)
-    #     display_count = 5
-    #     for k_val, x_val, fx_val, grad_n_val in iter_data[:display_count]:
-    #         print(f"{k_val:<5} | {x_val[0]:<12.6f} | {x_val[1]:<12.6f} | {fx_val:<15.4e} | {grad_n_val:<15.4e}")
-    #     if len(iter_data) > 2 * display_count:
-    #         print("...")
-    #     start_idx = max(display_count, len(iter_data) - display_count)
-    #     for k_val, x_val, fx_val, grad_n_val in iter_data[start_idx:]:
-    #          print(f"{k_val:<5} | {x_val[0]:<12.6f} | {x_val[1]:<12.6f} | {fx_val:<15.4e} | {grad_n_val:<15.4e}")
-
